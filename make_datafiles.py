@@ -187,6 +187,7 @@ def check_num_stories(stories_dir, num_expected):
 
 
 def create_dataset(source_addr, target_addr):
+    len_data = 4587365
     source_txts = open(source_addr)
     target_txts = open(target_addr)
     source_target = zip(source_txts, target_txts)
@@ -194,8 +195,8 @@ def create_dataset(source_addr, target_addr):
                  sents_count=4530000, start_indx=0)
     write_to_bin(source_target, out_file=os.path.join(finished_files_dir, 'test.bin'), sents_count=1000,
                  start_indx=4530000)
-    write_to_bin(source_target, out_file=os.path.join(finished_files_dir, 'val.bin'), sents_count=10000,
-                 start_indx=4531000)
+    write_to_bin(source_target, out_file=os.path.join(finished_files_dir, 'val.bin'), sents_count=50000,
+                 start_indx=4530000)
 
     # Chunk the data. This splits each of train.bin, val.bin and test.bin into smaller chunks, each containing e.g. 1000 examples, and saves them in finished_files/chunks
     chunk_all()

@@ -154,7 +154,7 @@ class Train(object):
             elif iter % 2000 == 0:
                 eval_loss = Evaluate(os.path.join(self.model_dir, 'model_1')).run()
                 if eval_loss < prev_eval_loss:
-                    print(f"eval loss for iteration: {iter}, previous best eval loss = {prev_eval_loss}, saving checkpoint...")
+                    print(f"eval loss for iteration: {iter} is {eval_loss}, previous best eval loss = {prev_eval_loss}, saving checkpoint...")
                     prev_eval_loss = eval_loss
                     self.save_model(running_avg_loss, iter)
                 else:
