@@ -10,7 +10,7 @@ import tensorflow as tf
 import torch
 import torch.optim as optim
 from torch.nn.utils import clip_grad_norm_
-
+from eval import Evaluate
 from models.model import Model
 from utils import config
 from utils.dataset import Vocab
@@ -48,7 +48,7 @@ class Train(object):
             'optimizer': self.optimizer.state_dict(),
             'current_loss': running_avg_loss
         }
-        model_save_path = os.path.join(self.model_dir, 'model_%d_%d' % (iter, int(time.time())))
+        model_save_path = os.path.join(self.model_dir, 'model_1')# % (iter, int(time.time())))
         torch.save(state, model_save_path)
 
     def setup_train(self, model_path=None):
@@ -136,8 +136,8 @@ class Train(object):
         iter, running_avg_loss = self.setup_train(model_path)
         start = time.time()
         interval = 100
-
-        while iter < n_iters:
+        prev_eval_loss = float("inf")
+        while (time.time() - start)/3600 <= 11.0:#iter < n_iters:
             batch = self.batcher.next_batch()
             loss, cove_loss = self.train_one_batch(batch)
 
@@ -149,8 +149,14 @@ class Train(object):
                 print(
                     'step: %d, second: %.2f , loss: %f, cover_loss: %f' % (iter, time.time() - start, loss, cove_loss))
                 start = time.time()
-            if iter % 5000 == 0:
-                self.save_model(running_avg_loss, iter)
+            if iter % 2000 == 0:
+                eval_loss = Evaluate(os.path.join(self.model_dir, 'model_1'))
+                if eval_loss < prev_eval_loss:
+                    print(f"eval loss for iteration: {iter}, previous best eval loss = {prev_eval_loss}, saving checkpoint...")
+                    prev_eval_loss = eval_loss
+                    self.save_model(running_avg_loss, iter)
+                else:
+                    print(f"eval loss for iteration: {iter}, previous best eval loss = {prev_eval_loss}, no improvement, skipping...")
 
 
 if __name__ == '__main__':

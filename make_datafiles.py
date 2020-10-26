@@ -62,6 +62,7 @@ def chunk_all():
         os.mkdir(chunks_dir)
     # Chunk the data
     for set_name in ['train', 'val', 'test']:
+    # for set_name in ['train']:
         print("Splitting %s data into chunks..." % set_name)
         chunk_file(set_name)
     print("Saved chunked data in %s" % chunks_dir)
@@ -120,79 +121,38 @@ def fix_missing_period(line):
     return line + " ."
 
 
-def get_art_abs(story_file):
-    lines = read_text_file(story_file)
-
-    # Lowercase everything
-    lines = [line.lower() for line in lines]
-
-    # Put periods on the ends of lines that are missing them (this is a problem in the dataset because many image captions don't end in periods; consequently they end up in the body of the article as run-on sentences)
-    lines = [fix_missing_period(line) for line in lines]
-
-    # Separate out article and abstract sentences
-    article_lines = []
-    highlights = []
-    next_is_highlight = False
-    for idx, line in enumerate(lines):
-        if line == "":
-            continue  # empty line
-        elif line.startswith("@highlight"):
-            next_is_highlight = True
-        elif next_is_highlight:
-            highlights.append(line)
-        else:
-            article_lines.append(line)
-
-    # Make article into a single string
-    article = ' '.join(article_lines)
-
-    # Make abstract into a signle string, putting <s> and </s> tags around the sentences
-    abstract = ' '.join(["%s %s %s" % (SENTENCE_START, sent, SENTENCE_END) for sent in highlights])
-
-    return article, abstract
+def get_source_target_txt(zipped_source_target):
+    target = zipped_source_target[1].strip()
+    target = ' '.join(["%s %s %s" % (SENTENCE_START, sent, SENTENCE_END) for sent in [target]])
 
 
-def write_to_bin(url_file, out_file, makevocab=False):
+    return zipped_source_target[0].strip(), target
+
+
+def write_to_bin(zipped_soruce_target_file, out_file, makevocab=False, sents_count = 10000, start_indx = 0):
     """Reads the tokenized .story files corresponding to the urls listed in the url_file and writes them to a out_file."""
-    print("Making bin file for URLs listed in %s..." % url_file)
-    url_list = read_text_file(url_file)
-    url_hashes = get_url_hashes(url_list)
-    story_fnames = [s + ".story" for s in url_hashes]
-    num_stories = len(story_fnames)
+    # print("Making bin file for URLs listed in %s..." % url_file)
+    # url_list = read_text_file(url_file)
+    # url_hashes = get_url_hashes(url_list)
+    # story_fnames = [s + ".story" for s in url_hashes]
+    # num_stories = len(story_fnames)
 
     if makevocab:
         vocab_counter = collections.Counter()
 
     with open(out_file, 'wb') as writer:
-        for idx, s in enumerate(story_fnames):
-            if idx % 1000 == 0:
-                print("Writing story %i of %i; %.2f percent done" % (
-                idx, num_stories, float(idx) * 100.0 / float(num_stories)))
-
-            # Look in the tokenized story dirs to find the .story file corresponding to this url
-            if os.path.isfile(os.path.join(cnn_tokenized_stories_dir, s)):
-                story_file = os.path.join(cnn_tokenized_stories_dir, s)
-            elif os.path.isfile(os.path.join(dm_tokenized_stories_dir, s)):
-                story_file = os.path.join(dm_tokenized_stories_dir, s)
-            else:
-                print("Error: Couldn't find tokenized story file %s in either tokenized story directories %s and %s. Was there an error during tokenization?" % (
-                s, cnn_tokenized_stories_dir, dm_tokenized_stories_dir))
-                # Check again if tokenized stories directories contain correct number of files
-                print("Checking that the tokenized stories directories %s and %s contain correct number of files..." % (
-                cnn_tokenized_stories_dir, dm_tokenized_stories_dir))
-                check_num_stories(cnn_tokenized_stories_dir, num_expected_cnn_stories)
-                check_num_stories(dm_tokenized_stories_dir, num_expected_dm_stories)
-                raise Exception(
-                    "Tokenized stories directories %s and %s contain correct number of files but story file %s found in neither." % (
-                    cnn_tokenized_stories_dir, dm_tokenized_stories_dir, s))
-
-            # Get the strings to write to .bin file
-            article, abstract = get_art_abs(story_file)
+        for i, item in enumerate(zipped_soruce_target_file):
+            if i < start_indx:
+                continue
+            if i > sents_count + start_indx:
+                break
+            print(out_file, i)
+            source_txt, target_txt = get_source_target_txt(item)
 
             # Write to tf.Example
             tf_example = example_pb2.Example()
-            tf_example.features.feature['article'].bytes_list.value.extend([bytes(article, encoding='utf-8')])
-            tf_example.features.feature['abstract'].bytes_list.value.extend([bytes(abstract, encoding='utf-8')])
+            tf_example.features.feature['source_txt'].bytes_list.value.extend([bytes(source_txt, encoding='utf-8')])
+            tf_example.features.feature['target_txt'].bytes_list.value.extend([bytes(target_txt, encoding='utf-8')])
             tf_example_str = tf_example.SerializeToString()
             str_len = len(tf_example_str)
             writer.write(struct.pack('q', str_len))
@@ -200,8 +160,8 @@ def write_to_bin(url_file, out_file, makevocab=False):
 
             # Write the vocab to file, if applicable
             if makevocab:
-                art_tokens = article.split(' ')
-                abs_tokens = abstract.split(' ')
+                art_tokens = source_txt.split(' ')
+                abs_tokens = target_txt.split(' ')
                 abs_tokens = [t for t in abs_tokens if
                               t not in [SENTENCE_START, SENTENCE_END]]  # remove these tags from vocab
                 tokens = art_tokens + abs_tokens
@@ -227,30 +187,17 @@ def check_num_stories(stories_dir, num_expected):
             "stories directory %s contains %i files but should contain %i" % (stories_dir, num_stories, num_expected))
 
 
-if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print("USAGE: python make_datafiles.py <cnn_stories_dir> <dailymail_stories_dir>")
-        sys.exit()
-    cnn_stories_dir = sys.argv[1]
-    dm_stories_dir = sys.argv[2]
+def create_dataset(source_addr, target_addr):
 
-    # Check the stories directories contain the correct number of .story files
-    check_num_stories(cnn_stories_dir, num_expected_cnn_stories)
-    check_num_stories(dm_stories_dir, num_expected_dm_stories)
-
-    # Create some new directories
-    if not os.path.exists(cnn_tokenized_stories_dir): os.makedirs(cnn_tokenized_stories_dir)
-    if not os.path.exists(dm_tokenized_stories_dir): os.makedirs(dm_tokenized_stories_dir)
-    if not os.path.exists(finished_files_dir): os.makedirs(finished_files_dir)
-
-    # Run stanford tokenizer on both stories dirs, outputting to tokenized stories directories
-    tokenize_stories(cnn_stories_dir, cnn_tokenized_stories_dir)
-    tokenize_stories(dm_stories_dir, dm_tokenized_stories_dir)
-
-    # Read the tokenized stories, do a little postprocessing then write to bin files
-    write_to_bin(all_test_urls, os.path.join(finished_files_dir, "test.bin"))
-    write_to_bin(all_val_urls, os.path.join(finished_files_dir, "val.bin"))
-    write_to_bin(all_train_urls, os.path.join(finished_files_dir, "train.bin"), makevocab=True)
+    source_txts = open(source_addr)
+    target_txts = open(target_addr)
+    source_target = zip(source_txts, target_txts)
+    write_to_bin(source_target, out_file=os.path.join(finished_files_dir,'train.bin'), makevocab=True, sents_count = 4530000, start_indx=0)
+    write_to_bin(source_target, out_file=os.path.join(finished_files_dir,'test.bin'), sents_count = 1000, start_indx=4530000)
+    write_to_bin(source_target, out_file=os.path.join(finished_files_dir, 'val.bin'), sents_count = 10000, start_indx=4531000)
 
     # Chunk the data. This splits each of train.bin, val.bin and test.bin into smaller chunks, each containing e.g. 1000 examples, and saves them in finished_files/chunks
     chunk_all()
+
+if __name__ == '__main__':
+    create_dataset(source_addr='/content/data/input.txt', target_addr='/content/data/output.txt')

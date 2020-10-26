@@ -19,6 +19,7 @@ from utils.utils import calc_running_avg_loss
 
 use_cuda = config.use_gpu and torch.cuda.is_available()
 
+
 class Evaluate(object):
     def __init__(self, model_path):
         self.vocab = Vocab(config.vocab_path, config.vocab_size)
@@ -46,9 +47,12 @@ class Evaluate(object):
         step_losses = []
         for di in range(min(max_dec_len, config.max_dec_steps)):
             y_t = dec_batch[:, di]  # Teacher forcing
-            final_dist, s_t, c_t,attn_dist, p_gen, next_coverage = self.model.decoder(y_t, s_t,
-                                                        enc_out, enc_fea, enc_padding_mask, c_t,
-                                                        extra_zeros, enc_batch_extend_vocab, coverage, di)
+            final_dist, s_t, c_t, attn_dist, p_gen, next_coverage = self.model.decoder(y_t, s_t,
+                                                                                       enc_out, enc_fea,
+                                                                                       enc_padding_mask, c_t,
+                                                                                       extra_zeros,
+                                                                                       enc_batch_extend_vocab, coverage,
+                                                                                       di)
             tgt = tgt_batch[:, di]
             gold_probs = torch.gather(final_dist, 1, tgt.unsqueeze(1)).squeeze()
             step_loss = -torch.log(gold_probs + config.eps)
@@ -90,5 +94,3 @@ if __name__ == '__main__':
     model_filename = sys.argv[1]
     eval_processor = Evaluate(model_filename)
     eval_processor.run()
-
-
