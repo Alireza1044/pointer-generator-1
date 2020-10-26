@@ -150,7 +150,7 @@ class Train(object):
                     'step: %d, second: %.2f , loss: %f, cover_loss: %f' % (iter, time.time() - start, loss, cove_loss))
                 start = time.time()
             if iter % 2000 == 0:
-                eval_loss = Evaluate(os.path.join(self.model_dir, 'model_1'))
+                eval_loss = Evaluate(os.path.join(self.model_dir, 'model_1')).run()
                 if eval_loss < prev_eval_loss:
                     print(f"eval loss for iteration: {iter}, previous best eval loss = {prev_eval_loss}, saving checkpoint...")
                     prev_eval_loss = eval_loss

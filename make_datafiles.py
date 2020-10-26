@@ -62,7 +62,7 @@ def chunk_all():
         os.mkdir(chunks_dir)
     # Chunk the data
     for set_name in ['train', 'val', 'test']:
-    # for set_name in ['train']:
+        # for set_name in ['train']:
         print("Splitting %s data into chunks..." % set_name)
         chunk_file(set_name)
     print("Saved chunked data in %s" % chunks_dir)
@@ -89,7 +89,7 @@ def tokenize_stories(stories_dir, tokenized_stories_dir):
     if num_orig != num_tokenized:
         raise Exception(
             "The tokenized stories directory %s contains %i files, but it should contain the same number as %s (which has %i files). Was there an error during tokenization?" % (
-            tokenized_stories_dir, num_tokenized, stories_dir, num_orig))
+                tokenized_stories_dir, num_tokenized, stories_dir, num_orig))
     print("Successfully finished tokenizing %s to %s.\n" % (stories_dir, tokenized_stories_dir))
 
 
@@ -125,11 +125,10 @@ def get_source_target_txt(zipped_source_target):
     target = zipped_source_target[1].strip()
     target = ' '.join(["%s %s %s" % (SENTENCE_START, sent, SENTENCE_END) for sent in [target]])
 
-
     return zipped_source_target[0].strip(), target
 
 
-def write_to_bin(zipped_soruce_target_file, out_file, makevocab=False, sents_count = 10000, start_indx = 0):
+def write_to_bin(zipped_soruce_target_file, out_file, makevocab=False, sents_count=10000, start_indx=0):
     """Reads the tokenized .story files corresponding to the urls listed in the url_file and writes them to a out_file."""
     # print("Making bin file for URLs listed in %s..." % url_file)
     # url_list = read_text_file(url_file)
@@ -173,7 +172,7 @@ def write_to_bin(zipped_soruce_target_file, out_file, makevocab=False, sents_cou
 
     # write vocab to file
     if makevocab:
-        print( "Writing vocab file...")
+        print("Writing vocab file...")
         with open(os.path.join(finished_files_dir, "vocab"), 'w') as writer:
             for word, count in vocab_counter.most_common(VOCAB_SIZE):
                 writer.write(word + ' ' + str(count) + '\n')
@@ -188,16 +187,19 @@ def check_num_stories(stories_dir, num_expected):
 
 
 def create_dataset(source_addr, target_addr):
-
     source_txts = open(source_addr)
     target_txts = open(target_addr)
     source_target = zip(source_txts, target_txts)
-    write_to_bin(source_target, out_file=os.path.join(finished_files_dir,'train.bin'), makevocab=True, sents_count = 4530000, start_indx=0)
-    write_to_bin(source_target, out_file=os.path.join(finished_files_dir,'test.bin'), sents_count = 1000, start_indx=4530000)
-    write_to_bin(source_target, out_file=os.path.join(finished_files_dir, 'val.bin'), sents_count = 10000, start_indx=4531000)
+    write_to_bin(source_target, out_file=os.path.join(finished_files_dir, 'train.bin'), makevocab=True,
+                 sents_count=4530000, start_indx=0)
+    write_to_bin(source_target, out_file=os.path.join(finished_files_dir, 'test.bin'), sents_count=1000,
+                 start_indx=4530000)
+    write_to_bin(source_target, out_file=os.path.join(finished_files_dir, 'val.bin'), sents_count=10000,
+                 start_indx=4531000)
 
     # Chunk the data. This splits each of train.bin, val.bin and test.bin into smaller chunks, each containing e.g. 1000 examples, and saves them in finished_files/chunks
     chunk_all()
+
 
 if __name__ == '__main__':
     create_dataset(source_addr='/content/data/input.txt', target_addr='/content/data/output.txt')
