@@ -56,6 +56,6 @@ log_root = os.path.join(root_dir, "dataset/log/")
 
 #train_data_path = os.path.join(root_dir, "pointer_generator/dataset/finished_files/train.bin")
 train_data_path = os.path.join(root_dir, "dataset/finished_files/chunked/train_*")
-eval_data_path = os.path.join(root_dir, "dataset/finished_files/val.bin")
+eval_data_path = os.path.join(root_dir, "dataset/finished_files/chunked/val_*")
 decode_data_path = os.path.join(root_dir, "dataset/finished_files/train.bin")
 vocab_path = os.path.join(root_dir, "dataset/finished_files/vocab")
