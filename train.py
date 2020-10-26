@@ -149,7 +149,9 @@ class Train(object):
                 print(
                     'step: %d, second: %.2f , loss: %f, cover_loss: %f' % (iter, time.time() - start, loss, cove_loss))
                 start = time.time()
-            if iter % 2000 == 0:
+            if iter == 2000:
+                self.save_model(running_avg_loss, iter)
+            elif iter % 2000 == 0:
                 eval_loss = Evaluate(os.path.join(self.model_dir, 'model_1')).run()
                 if eval_loss < prev_eval_loss:
                     print(f"eval loss for iteration: {iter}, previous best eval loss = {prev_eval_loss}, saving checkpoint...")
@@ -157,7 +159,6 @@ class Train(object):
                     self.save_model(running_avg_loss, iter)
                 else:
                     print(f"eval loss for iteration: {iter}, previous best eval loss = {prev_eval_loss}, no improvement, skipping...")
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Train script")
