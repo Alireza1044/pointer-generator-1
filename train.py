@@ -39,7 +39,7 @@ class Train(object):
 
         self.summary_writer = tf.summary.FileWriter(train_dir)
 
-    def save_model(self, running_avg_loss, iter):
+    def save_model(self, running_avg_loss, iter, name='model_1'):
         state = {
             'iter': iter,
             'encoder_state_dict': self.model.encoder.state_dict(),
@@ -48,7 +48,7 @@ class Train(object):
             'optimizer': self.optimizer.state_dict(),
             'current_loss': running_avg_loss
         }
-        model_save_path = os.path.join(self.model_dir, 'model_1')# % (iter, int(time.time())))
+        model_save_path = os.path.join(self.model_dir, name)# % (iter, int(time.time())))
         torch.save(state, model_save_path)
 
     def setup_train(self, model_path=None):
@@ -152,7 +152,8 @@ class Train(object):
             if iter == 2000:
                 self.save_model(running_avg_loss, iter)
             elif iter % 2000 == 0:
-                eval_loss = Evaluate(os.path.join(self.model_dir, 'model_1')).run()
+                self.save_model(running_avg_loss, iter, 'model_temp')
+                eval_loss = Evaluate(os.path.join(self.model_dir, 'model_temp')).run()
                 if eval_loss < prev_eval_loss:
                     print(f"eval loss for iteration: {iter} is {eval_loss}, previous best eval loss = {prev_eval_loss}, saving checkpoint...")
                     prev_eval_loss = eval_loss
