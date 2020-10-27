@@ -45,7 +45,7 @@ class Beam(object):
 
 class BeamSearch(object):
     def __init__(self, model_file_path):
-        
+
         model_name = os.path.basename(model_file_path)
         self._test_dir = os.path.join(config.log_root, 'decode_%s' % (model_name))
         self._rouge_ref_dir = os.path.join(self._test_dir, 'rouge_ref')
@@ -63,16 +63,16 @@ class BeamSearch(object):
 
     def sort_beams(self, beams):
         return sorted(beams, key=lambda h: h.avg_log_prob, reverse=True)
-    
 
     def beam_search(self, batch):
         # single example repeated across the batch
-        enc_batch, enc_lens, enc_pos, enc_padding_mask, enc_batch_extend_vocab, extra_zeros, c_t, coverage = get_input_from_batch(batch, use_cuda)
+        enc_batch, enc_lens, enc_pos, enc_padding_mask, enc_batch_extend_vocab, extra_zeros, c_t, coverage = get_input_from_batch(
+            batch, use_cuda)
 
         enc_out, enc_fea, enc_h = self.model.encoder(enc_batch, enc_lens)
         s_t = self.model.reduce_state(enc_h)
 
-        dec_h, dec_c = s_t     # b x hidden_dim
+        dec_h, dec_c = s_t  # b x hidden_dim
         dec_h = dec_h.squeeze()
         dec_c = dec_c.squeeze()
 
@@ -95,7 +95,7 @@ class BeamSearch(object):
                 y_t = y_t.cuda()
             all_state_h = [h.state[0] for h in beams]
             all_state_c = [h.state[1] for h in beams]
-            all_context = [h.context  for h in beams]
+            all_context = [h.context for h in beams]
 
             s_t = (torch.stack(all_state_h, 0).unsqueeze(0), torch.stack(all_state_c, 0).unsqueeze(0))
             c_t = torch.stack(all_context, 0)
@@ -152,9 +152,9 @@ class BeamSearch(object):
         beams_sorted = self.sort_beams(results)
 
         return beams_sorted[0]
-    
+
     def run(self):
-        
+
         counter = 0
         start = time.time()
         batch = self.batcher.next_batch()
@@ -165,7 +165,7 @@ class BeamSearch(object):
             # Extract the output ids from the hypothesis and convert back to words
             output_ids = [int(t) for t in best_summary.tokens[1:]]
             decoded_words = utils.outputids2words(output_ids, self.vocab,
-                                                    (batch.art_oovs[0] if config.pointer_gen else None))
+                                                  (batch.art_oovs[0] if config.pointer_gen else None))
 
             # Remove the [STOP] token from decoded_words, if necessary
             try:
@@ -175,9 +175,17 @@ class BeamSearch(object):
                 decoded_words = decoded_words
 
             original_abstract_sents = batch.original_abstracts_sents[0]
-            print(original_abstract_sents, decoded_words)
-            write_for_rouge(original_abstract_sents, decoded_words, counter,
-                            self._rouge_ref_dir, self._rouge_dec_dir)
+            input_sents = batch.original_articles[0]
+            if counter % 75 == 0:
+                print("Input:")
+                print(' '.join([input_sents.decode()]))
+                print("Desired output:")
+                print(' '.join([sentence.decode() for sentence in original_abstract_sents]))
+                print("Network output:")
+                print(' '.join(decoded_words))
+                print("-----------------------\n\n")
+            #            write_for_rouge(original_abstract_sents, decoded_words, counter,
+            #                              self._rouge_ref_dir, self._rouge_dec_dir)
             counter += 1
             if counter % 1000 == 0:
                 print('%d example in %d sec' % (counter, time.time() - start))
@@ -187,12 +195,14 @@ class BeamSearch(object):
 
         print("Decoder has finished reading dataset for single_pass.")
         print("Now starting ROUGE eval...")
-        results_dict = rouge_eval(self._rouge_ref_dir, self._rouge_dec_dir)
-        rouge_log(results_dict, self._test_dir)
+
+
+#        results_dict = rouge_eval(self._rouge_ref_dir, self._rouge_dec_dir)
+#        rouge_log(results_dict, self._test_dir)
 
 
 if __name__ == '__main__':
     # model_filename = sys.argv[1]
-    a = 'model_10000_1590518495'
-    test_processor = BeamSearch(model_file_path = '/home/mohammadkrb/Desktop/Ahd/Seq/NoisyTransformer/pointer-generator/dataset/log/train_1590524674/models/model_10000_1590527446')
+    a = 'model_1'
+    test_processor = BeamSearch(model_file_path='/content/model_1')
     test_processor.run()
