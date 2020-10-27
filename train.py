@@ -149,9 +149,7 @@ class Train(object):
                 print(
                     'step: %d, second: %.2f , loss: %f, cover_loss: %f' % (iter, time.time() - start, loss, cove_loss))
                 start = time.time()
-            if iter == 2000:
-                self.save_model(running_avg_loss, iter)
-            elif iter % 2000 == 0:
+            if iter % 20000 == 0:
                 self.save_model(running_avg_loss, iter, 'model_temp')
                 eval_loss = Evaluate(os.path.join(self.model_dir, 'model_temp')).run()
                 if eval_loss < prev_eval_loss:
